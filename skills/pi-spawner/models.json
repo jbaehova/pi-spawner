@@ -1,0 +1,42 @@
+{
+  "default_route": "code",
+  "defaults": {
+    "provider": null,
+    "model": null,
+    "thinking": null
+  },
+  "aliases": {
+    "kimi": {
+      "provider": "openrouter",
+      "model": "moonshotai/kimi-k2.6",
+      "thinking": "high"
+    },
+    "kimi-k2": {
+      "provider": "openrouter",
+      "model": "moonshotai/kimi-k2.6",
+      "thinking": "high"
+    },
+    "deepseek": {
+      "provider": "openrouter",
+      "model": "deepseek/deepseek-v3.2",
+      "thinking": "high"
+    },
+    "qwen": {
+      "provider": "openrouter",
+      "model": "qwen/qwen3-coder",
+      "thinking": "off"
+    },
+    "gemini": {
+      "provider": "openrouter",
+      "model": "google/gemini-2.5-pro",
+      "thinking": "high"
+    }
+  },
+  "routes": {
+    "code": "kimi",
+    "plan": "kimi",
+    "writing": "deepseek",
+    "review": "deepseek",
+    "design": "gemini"
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pi Spawner"
+  short_description: "Delegate Codex work to Pi model workers"
+  default_prompt: "Use $pi-spawner to delegate specialist subtasks to Pi workers with aliases, routes, and thinking levels."
