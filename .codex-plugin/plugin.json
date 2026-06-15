@@ -1,7 +1,7 @@
 {
   "name": "pi-spawner",
-  "version": "0.1.0",
-  "description": "Delegate Codex subtasks to Pi CLI workers with configurable provider, model, thinking level, aliases, and routes.",
+  "version": "0.2.0",
+  "description": "Delegate coding-agent subtasks to read-by-default Pi CLI model workers with configurable permission, provider, model, thinking level, aliases, and routes.",
   "author": {
     "name": "Johnny Bae",
     "url": "https://github.com/jbaehova"
@@ -12,19 +12,22 @@
   "keywords": [
     "pi",
     "codex",
+    "agent-skills",
     "subagents",
     "models",
+    "multi-agent",
     "codex-plugin"
   ],
   "skills": "./skills/",
   "interface": {
     "displayName": "Pi Spawner",
-    "shortDescription": "Delegate Codex work to Pi model workers",
-    "longDescription": "Pi Spawner lets Codex orchestrate read-only Pi CLI workers with per-task provider, model, thinking level, aliases, and route-based defaults for code, review, writing, design, and planning.",
+    "shortDescription": "Delegate work to Pi model workers",
+    "longDescription": "Pi Spawner lets Codex orchestrate read-by-default Pi CLI workers with per-task permission, provider, model, thinking level, aliases, and route-based defaults for code, review, writing, design, and planning.",
     "developerName": "Johnny Bae",
     "category": "Productivity",
     "capabilities": [
-      "Read"
+      "Read",
+      "Write"
     ],
     "websiteURL": "https://github.com/jbaehova/pi-spawner",
     "defaultPrompt": [

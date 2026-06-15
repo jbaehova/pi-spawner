@@ -1,9 +1,38 @@
-<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="256" height="256" rx="48" fill="#0F172A"/>
-  <path d="M64 72C64 63.1634 71.1634 56 80 56H176C184.837 56 192 63.1634 192 72V184C192 192.837 184.837 200 176 200H80C71.1634 200 64 192.837 64 184V72Z" fill="#2563EB"/>
-  <path d="M88 96H168" stroke="#E0F2FE" stroke-width="12" stroke-linecap="round"/>
-  <path d="M88 128H144" stroke="#E0F2FE" stroke-width="12" stroke-linecap="round"/>
-  <path d="M88 160H124" stroke="#E0F2FE" stroke-width="12" stroke-linecap="round"/>
-  <circle cx="176" cy="176" r="32" fill="#22C55E"/>
-  <path d="M162 176L172 186L192 164" stroke="#052E16" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">pi-spawner monochrome</title>
+  <desc id="desc">A clean robot handing a round pi sub-agent orb, monochrome SVG.</desc>
+  <g fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="354" cy="246" r="102" fill="none"/>
+    <circle cx="354" cy="246" r="82" stroke-width="10" opacity="0.38"/>
+    <rect x="312" y="180" width="84" height="46" rx="13" stroke-width="14"/>
+    <circle cx="338" cy="203" r="5" fill="currentColor" stroke="none"/>
+    <circle cx="370" cy="203" r="5" fill="currentColor" stroke="none"/>
+    <path d="M313 268 H395" stroke-width="17"/>
+    <path d="M333 268 V320" stroke-width="17"/>
+    <path d="M375 268 C375 292 374 309 390 320" stroke-width="17"/>
+
+    <path d="M108 121 H206 C219 121 230 132 230 145 V209 C230 222 219 233 206 233 H108 C95 233 84 222 84 209 V145 C84 132 95 121 108 121 Z"/>
+    <path d="M135 100 H179"/>
+    <path d="M157 100 V121"/>
+    <path d="M84 170 H62 V196 H84"/>
+    <rect x="117" y="156" width="80" height="42" rx="11" stroke-width="14"/>
+    <circle cx="142" cy="177" r="5" fill="currentColor" stroke="none"/>
+    <circle cx="172" cy="177" r="5" fill="currentColor" stroke="none"/>
+
+    <rect x="106" y="246" width="103" height="106" rx="18"/>
+    <path d="M130 275 H185" stroke-width="12" opacity="0.45"/>
+    <path d="M137 313 H178" stroke-width="12" opacity="0.45"/>
+    <path d="M106 277 C81 279 69 293 64 315"/>
+    <path d="M61 319 H82"/>
+    <path d="M209 278 C235 274 246 257 264 247"/>
+    <circle cx="270" cy="244" r="10" fill="none"/>
+    <path d="M135 352 V391"/>
+    <path d="M181 352 V391"/>
+    <path d="M107 391 H209"/>
+    <path d="M128 419 H188"/>
+
+    <circle cx="249" cy="210" r="5" fill="currentColor" stroke="none"/>
+    <circle cx="274" cy="188" r="4" fill="currentColor" stroke="none" opacity="0.75"/>
+    <path d="M273 219 L285 207 M285 219 L273 207" stroke-width="7"/>
+  </g>
 </svg>

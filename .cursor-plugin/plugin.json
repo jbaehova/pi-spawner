@@ -1,0 +1,22 @@
+{
+  "name": "pi-spawner",
+  "displayName": "Pi Spawner",
+  "description": "Delegate coding-agent subtasks to read-by-default Pi CLI model workers with configurable permission, provider, model, thinking level, aliases, and routes.",
+  "version": "0.2.0",
+  "author": {
+    "name": "Johnny Bae"
+  },
+  "homepage": "https://github.com/jbaehova/pi-spawner",
+  "repository": "https://github.com/jbaehova/pi-spawner",
+  "license": "MIT",
+  "keywords": [
+    "pi",
+    "agent-skills",
+    "cursor",
+    "subagents",
+    "models",
+    "multi-agent"
+  ],
+  "logo": "assets/pi-spawner.svg",
+  "skills": "./skills/"
+}
