@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <em>The host agent stays in control. Pi workers read by default and can write only when explicitly allowed.</em>
+  <em>The host agent stays in control. Pi workers read by default and can write only when explicitly allowed. Available for Codex, Claude Code, Cursor, Hermes Agent, and other Agent Skills hosts.</em>
 </p>
 
 <p align="center">
@@ -23,7 +23,9 @@
   <a href="#cli-usage">CLI Usage</a>
 </p>
 
-> **Pi Spawner** lets Codex, Claude Code, Cursor, Hermes Agent, and other Agent Skills-compatible hosts delegate read-by-default subtasks to Pi CLI workers with per-task provider, model, thinking level, permission, aliases, and route-based defaults.
+<p align="center">
+  <img src="assets/pi-spawner-banner.png" alt="Pi Spawner pixel art banner" width="100%">
+</p>
 
 ## What It Does
 
