@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import difflib
+import hashlib
 import json
 import os
 import re
 import shlex
+import stat
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,7 +20,14 @@ from typing import Any
 
 DEFAULT_MAX_CONCURRENCY = 3
 DEFAULT_TIMEOUT_SECONDS = 600
-DEFAULT_TOOLS = "read,grep,find,ls"
+READ_TOOLS = "read,grep,find,ls"
+WRITE_TOOLS = "read,grep,find,ls,edit,write"
+DEFAULT_ORCHESTRATOR_NAME = "the host coding agent"
+DEFAULT_SESSION_DIR = "~/.pi/pi-spawner-workers"
+LEGACY_SESSION_DIR = "~/.pi/codex-workers"
+DEFAULT_PERMISSION = "read"
+PERMISSION_LEVELS = {"read", "write"}
+TEXT_DIFF_MAX_BYTES = 1_000_000
 THINKING_LEVELS = {"off", "minimal", "low", "medium", "high", "xhigh"}
 ROUTE_NAMES = {"design", "writing", "code", "review", "plan"}
 KNOWN_PROVIDER_PREFIXES = {
@@ -127,6 +137,23 @@ class WorkerTask:
     session_dir: Path
     timeout_seconds: int
     model_source: str
+    orchestrator_name: str
+    permission: str
+    tools: str
+
+
+@dataclass(frozen=True)
+class FileState:
+    size: int
+    sha256: str
+    text: str | None
+    diff_omitted: str | None
+
+
+@dataclass(frozen=True)
+class WorkspaceSnapshot:
+    files: dict[str, FileState]
+    errors: list[dict[str, str]]
 
 
 def parse_args() -> argparse.Namespace:
@@ -209,6 +236,23 @@ def validate_thinking(value: Any, *, name: str = "thinking") -> str | None:
     return thinking
 
 
+def validate_permission(value: Any, *, name: str = "permission") -> str | None:
+    permission = optional_str(value, name=name)
+    if permission is None:
+        return None
+    if permission not in PERMISSION_LEVELS:
+        raise SpecError(
+            f"{name} must be one of {', '.join(sorted(PERMISSION_LEVELS))}; got {permission!r}."
+        )
+    return permission
+
+
+def tools_for_permission(permission: str) -> str:
+    if permission == "write":
+        return WRITE_TOOLS
+    return READ_TOOLS
+
+
 def merge_config(file_config: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
     config = json.loads(json.dumps(BUILTIN_CONFIG))
     for source in (file_config, spec):
@@ -251,6 +295,25 @@ def load_pi_settings() -> dict[str, Any]:
         "model": settings.get("defaultModel"),
         "thinking": settings.get("defaultThinkingLevel"),
     }
+
+
+def has_directory_entries(path: Path) -> bool:
+    try:
+        next(path.iterdir())
+    except (FileNotFoundError, NotADirectoryError, StopIteration, OSError):
+        return False
+    return True
+
+
+def resolve_session_dir(configured_session_dir: str | None, session_id: str | None) -> Path:
+    if configured_session_dir:
+        return Path(configured_session_dir).expanduser().resolve()
+
+    legacy_dir = Path(LEGACY_SESSION_DIR).expanduser().resolve()
+    if session_id and has_directory_entries(legacy_dir):
+        return legacy_dir
+
+    return Path(DEFAULT_SESSION_DIR).expanduser().resolve()
 
 
 def split_model_token(model: str, provider_hint: str | None) -> tuple[str | None, str, str | None]:
@@ -465,9 +528,13 @@ def build_tasks(spec: dict[str, Any]) -> tuple[list[WorkerTask], int]:
         default=DEFAULT_TIMEOUT_SECONDS,
         name="timeout_seconds",
     )
-    session_dir = Path(
-        spec.get("session_dir") or "~/.pi/codex-workers"
-    ).expanduser().resolve()
+    configured_session_dir = optional_str(spec.get("session_dir"), name="session_dir")
+    orchestrator_name = optional_str(
+        spec.get("orchestrator_name"), name="orchestrator_name"
+    ) or DEFAULT_ORCHESTRATOR_NAME
+    spec_permission = (
+        validate_permission(spec.get("permission"), name="permission") or DEFAULT_PERMISSION
+    )
 
     tasks: list[WorkerTask] = []
     seen_ids: set[str] = set()
@@ -489,6 +556,11 @@ def build_tasks(spec: dict[str, Any]) -> tuple[list[WorkerTask], int]:
             session_id = str(session_id).strip()
             if not session_id:
                 session_id = None
+        session_dir = resolve_session_dir(configured_session_dir, session_id)
+        permission = (
+            validate_permission(raw_task.get("permission"), name=f"task {task_id} permission")
+            or spec_permission
+        )
 
         role = str(raw_task.get("role") or "specialist worker")
         tasks.append(
@@ -510,6 +582,9 @@ def build_tasks(spec: dict[str, Any]) -> tuple[list[WorkerTask], int]:
                     name=f"task {task_id} timeout_seconds",
                 ),
                 model_source=choice.source,
+                orchestrator_name=orchestrator_name,
+                permission=permission,
+                tools=tools_for_permission(permission),
             )
         )
 
@@ -517,16 +592,26 @@ def build_tasks(spec: dict[str, Any]) -> tuple[list[WorkerTask], int]:
 
 
 def worker_prompt(task: WorkerTask) -> str:
-    return f"""You are a Pi worker subordinate to Codex.
+    if task.permission == "write":
+        rules = """- You may modify files directly with the available edit/write tools.
+- Keep changes tightly scoped to the assignment and the current working directory.
+- Do not attempt to run shell commands; bash is not available in this permission tier.
+- Summarize the files you changed and why.
+- Codex will collect the actual filesystem changes after you finish."""
+    else:
+        rules = """- Inspect files as needed, but do not modify files.
+- Return recommendations, analysis, drafts, or a unified diff only.
+- If proposing code changes, include a single fenced ```diff block."""
+
+    return f"""You are a Pi worker subordinate to {task.orchestrator_name}.
 
 Role: {task.role}
+Permission: {task.permission}
 
 Rules:
-- Inspect files as needed, but do not modify files.
-- Return recommendations, analysis, drafts, or a unified diff only.
-- If proposing code changes, include a single fenced ```diff block.
+{rules}
 - Ground claims in concrete file paths, symbols, commands, or observed behavior.
-- Keep the response concise and useful for Codex to review.
+- Keep the response concise and useful for {task.orchestrator_name} to review.
 
 Assignment:
 {task.prompt}
@@ -534,7 +619,7 @@ Assignment:
 
 
 def command_for(task: WorkerTask) -> list[str]:
-    command = ["pi", "-p", "--mode", "json", "--tools", DEFAULT_TOOLS]
+    command = ["pi", "-p", "--mode", "json", "--tools", task.tools]
     if task.provider:
         command.extend(["--provider", task.provider])
     if task.model:
@@ -616,6 +701,146 @@ def summarize(text: str, diff: str) -> str:
     return ""
 
 
+def relative_path(path: Path, root: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def state_for_bytes(data: bytes) -> FileState:
+    diff_omitted: str | None = None
+    text: str | None = None
+    if len(data) > TEXT_DIFF_MAX_BYTES:
+        diff_omitted = "too_large"
+    elif b"\0" in data:
+        diff_omitted = "binary"
+    else:
+        try:
+            text = data.decode("utf-8")
+        except UnicodeDecodeError:
+            diff_omitted = "non_utf8"
+
+    return FileState(
+        size=len(data),
+        sha256=hashlib.sha256(data).hexdigest(),
+        text=text,
+        diff_omitted=diff_omitted,
+    )
+
+
+def capture_workspace(root: Path) -> WorkspaceSnapshot:
+    files: dict[str, FileState] = {}
+    errors: list[dict[str, str]] = []
+
+    def on_walk_error(exc: OSError) -> None:
+        filename = exc.filename or str(root)
+        errors.append({"path": relative_path(Path(filename), root), "error": str(exc)})
+
+    for dirpath, dirnames, filenames in os.walk(root, topdown=True, onerror=on_walk_error):
+        dirnames.sort()
+        filenames.sort()
+        for filename in filenames:
+            path = Path(dirpath) / filename
+            rel_path = relative_path(path, root)
+            try:
+                file_stat = path.lstat()
+                if not stat.S_ISREG(file_stat.st_mode):
+                    continue
+                files[rel_path] = state_for_bytes(path.read_bytes())
+            except OSError as exc:
+                errors.append({"path": rel_path, "error": str(exc)})
+
+    return WorkspaceSnapshot(files=files, errors=errors)
+
+
+def diff_for_file(path: str, before: FileState | None, after: FileState | None) -> str:
+    if before and before.text is None:
+        return ""
+    if after and after.text is None:
+        return ""
+
+    before_lines = before.text.splitlines(keepends=True) if before else []
+    after_lines = after.text.splitlines(keepends=True) if after else []
+    fromfile = f"a/{path}" if before else "/dev/null"
+    tofile = f"b/{path}" if after else "/dev/null"
+    return "".join(
+        difflib.unified_diff(
+            before_lines,
+            after_lines,
+            fromfile=fromfile,
+            tofile=tofile,
+        )
+    )
+
+
+def write_entry(
+    change_type: str, before: FileState | None, after: FileState | None
+) -> dict[str, Any]:
+    diff_omitted = None
+    if before and before.diff_omitted:
+        diff_omitted = before.diff_omitted
+    if after and after.diff_omitted:
+        diff_omitted = after.diff_omitted
+
+    return {
+        "change": change_type,
+        "size_before": before.size if before else None,
+        "size_after": after.size if after else None,
+        "sha256_before": before.sha256 if before else None,
+        "sha256_after": after.sha256 if after else None,
+        "text_diff": bool(
+            (before is None or before.text is not None)
+            and (after is None or after.text is not None)
+        ),
+        "diff_omitted": diff_omitted,
+    }
+
+
+def compare_workspaces(before: WorkspaceSnapshot, after: WorkspaceSnapshot) -> dict[str, Any]:
+    changed_files: list[str] = []
+    files: dict[str, dict[str, Any]] = {}
+    diff_parts: list[str] = []
+
+    for path in sorted(set(before.files) | set(after.files)):
+        before_state = before.files.get(path)
+        after_state = after.files.get(path)
+        if before_state and after_state and before_state.sha256 == after_state.sha256:
+            continue
+
+        if before_state is None:
+            change_type = "added"
+        elif after_state is None:
+            change_type = "deleted"
+        else:
+            change_type = "modified"
+
+        changed_files.append(path)
+        files[path] = write_entry(change_type, before_state, after_state)
+        text_diff = diff_for_file(path, before_state, after_state)
+        if text_diff:
+            diff_parts.append(text_diff)
+
+    capture_errors = before.errors + after.errors
+    return {
+        "changed_files": changed_files,
+        "files": files,
+        "diff": "\n".join(part.rstrip("\n") for part in diff_parts),
+        "capture_errors": capture_errors,
+        "complete": not capture_errors,
+    }
+
+
+def empty_write_capture(errors: list[dict[str, str]]) -> dict[str, Any]:
+    return {
+        "changed_files": [],
+        "files": {},
+        "diff": "",
+        "capture_errors": errors,
+        "complete": not errors,
+    }
+
+
 def diagnostics_for(task: WorkerTask, exit_code: int | None, stderr: str) -> dict[str, Any]:
     diagnostics: dict[str, Any] = {
         "model_source": task.model_source,
@@ -634,6 +859,19 @@ def diagnostics_for(task: WorkerTask, exit_code: int | None, stderr: str) -> dic
 
 async def run_task(task: WorkerTask, semaphore: asyncio.Semaphore) -> dict[str, Any]:
     command = command_for(task)
+    before_snapshot: WorkspaceSnapshot | None = None
+    if task.permission == "write":
+        before_snapshot = capture_workspace(task.cwd)
+        if before_snapshot.errors:
+            return result_for(
+                task,
+                command,
+                125,
+                "",
+                "Could not capture pre-write workspace snapshot.",
+                writes=empty_write_capture(before_snapshot.errors),
+            )
+
     async with semaphore:
         try:
             proc = await asyncio.create_subprocess_exec(
@@ -651,24 +889,61 @@ async def run_task(task: WorkerTask, semaphore: asyncio.Semaphore) -> dict[str, 
                 proc.kill()
             except ProcessLookupError:
                 pass
-            return result_for(task, command, 124, "", f"Timed out after {task.timeout_seconds}s")
+            try:
+                await proc.wait()
+            except ProcessLookupError:
+                pass
+            writes = (
+                compare_workspaces(before_snapshot, capture_workspace(task.cwd))
+                if before_snapshot is not None
+                else None
+            )
+            return result_for(
+                task,
+                command,
+                124,
+                "",
+                f"Timed out after {task.timeout_seconds}s",
+                writes=writes,
+            )
         except FileNotFoundError:
-            return result_for(task, command, 127, "", "pi executable not found on PATH")
+            writes = (
+                compare_workspaces(before_snapshot, capture_workspace(task.cwd))
+                if before_snapshot is not None
+                else None
+            )
+            return result_for(
+                task,
+                command,
+                127,
+                "",
+                "pi executable not found on PATH",
+                writes=writes,
+            )
 
     stdout = stdout_bytes.decode("utf-8", errors="replace")
     stderr = stderr_bytes.decode("utf-8", errors="replace")
-    return result_for(task, command, exit_code, stdout, stderr)
+    writes = None
+    if before_snapshot is not None:
+        writes = compare_workspaces(before_snapshot, capture_workspace(task.cwd))
+    return result_for(task, command, exit_code, stdout, stderr, writes=writes)
 
 
 def result_for(
-    task: WorkerTask, command: list[str], exit_code: int | None, stdout: str, stderr: str
+    task: WorkerTask,
+    command: list[str],
+    exit_code: int | None,
+    stdout: str,
+    stderr: str,
+    *,
+    writes: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     text = extract_text(stdout)
     diff = extract_diff(text)
     errors = stderr.strip()
     if exit_code not in (0, None) and not errors:
         errors = f"pi exited with code {exit_code}"
-    return {
+    result = {
         "id": task.task_id,
         "role": task.role,
         "route": task.route,
@@ -676,8 +951,11 @@ def result_for(
         "provider": task.provider,
         "model": task.model,
         "thinking": task.thinking,
+        "permission": task.permission,
+        "tools": task.tools,
         "model_source": task.model_source,
         "session_id": task.session_id,
+        "orchestrator_name": task.orchestrator_name,
         "exit_code": exit_code,
         "summary": summarize(text, diff),
         "diff": diff,
@@ -686,17 +964,35 @@ def result_for(
         "diagnostics": diagnostics_for(task, exit_code, errors),
         "command": shlex.join(command[:-1] + ["<prompt>"]),
     }
+    if writes is not None:
+        result["writes"] = writes
+    return result
 
 
 async def run_all(tasks: list[WorkerTask], max_concurrency: int) -> list[dict[str, Any]]:
+    if any(task.permission == "write" for task in tasks):
+        results: list[dict[str, Any]] = []
+        semaphore = asyncio.Semaphore(1)
+        for task in tasks:
+            results.append(await run_task(task, semaphore))
+        return results
+
     semaphore = asyncio.Semaphore(max_concurrency)
     return await asyncio.gather(*(run_task(task, semaphore) for task in tasks))
 
 
+def effective_max_concurrency(tasks: list[WorkerTask], max_concurrency: int) -> int:
+    if any(task.permission == "write" for task in tasks):
+        return 1
+    return max_concurrency
+
+
 def dry_run(tasks: list[WorkerTask], max_concurrency: int) -> dict[str, Any]:
+    effective_concurrency = effective_max_concurrency(tasks, max_concurrency)
     return {
         "dry_run": True,
-        "max_concurrency": max_concurrency,
+        "max_concurrency": effective_concurrency,
+        "requested_max_concurrency": max_concurrency,
         "tasks": [
             {
                 "id": task.task_id,
@@ -706,8 +1002,11 @@ def dry_run(tasks: list[WorkerTask], max_concurrency: int) -> dict[str, Any]:
                 "provider": task.provider,
                 "model": task.model,
                 "thinking": task.thinking,
+                "permission": task.permission,
+                "tools": task.tools,
                 "model_source": task.model_source,
                 "session_id": task.session_id,
+                "orchestrator_name": task.orchestrator_name,
                 "cwd": str(task.cwd),
                 "timeout_seconds": task.timeout_seconds,
                 "command": shlex.join(command_for(task)[:-1] + ["<prompt>"]),
@@ -727,7 +1026,8 @@ def main() -> int:
         else:
             output = {
                 "results": asyncio.run(run_all(tasks, max_concurrency)),
-                "max_concurrency": max_concurrency,
+                "max_concurrency": effective_max_concurrency(tasks, max_concurrency),
+                "requested_max_concurrency": max_concurrency,
             }
     except SpecError as exc:
         output = {"error": str(exc), "failure_policy": "ask_user_no_auto_fallback"}
