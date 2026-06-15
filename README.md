@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/pi-spawner-banner.png" alt="Pi Spawner pixel art banner" width="100%">
+  <img src="assets/pi-spawner-banner.png" alt="Pi Spawner pixel art banner" width="70%">
 </p>
 
 ## What It Does
