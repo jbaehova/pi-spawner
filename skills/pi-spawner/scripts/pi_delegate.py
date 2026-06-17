@@ -70,6 +70,7 @@ PROVIDER_AUTH_HINTS = {
 }
 BUILTIN_CONFIG = {
     "default_route": "code",
+    "max_concurrency": DEFAULT_MAX_CONCURRENCY,
     "defaults": {"provider": None, "model": None, "thinking": None},
     "aliases": {
         "kimi": {
@@ -177,6 +178,25 @@ def default_config_path() -> Path:
     return skill_root() / "models.json"
 
 
+def user_config_path() -> Path:
+    env_config = os.environ.get("PI_SPAWNER_CONFIG")
+    if env_config:
+        return Path(env_config).expanduser()
+    return Path("~/.pi/pi-spawner/models.json").expanduser()
+
+
+def discover_config_path() -> tuple[Path, bool]:
+    env_config = os.environ.get("PI_SPAWNER_CONFIG")
+    if env_config:
+        return Path(env_config).expanduser(), True
+
+    user_path = user_config_path()
+    if user_path.exists():
+        return user_path, False
+
+    return default_config_path(), False
+
+
 def load_spec(path: str | None) -> dict[str, Any]:
     try:
         if path:
@@ -260,6 +280,8 @@ def merge_config(file_config: dict[str, Any], spec: dict[str, Any]) -> dict[str,
             continue
         if "default_route" in source:
             config["default_route"] = source["default_route"]
+        if "max_concurrency" in source:
+            config["max_concurrency"] = source["max_concurrency"]
         if "defaults" in source:
             if not isinstance(source["defaults"], dict):
                 raise SpecError("defaults must be an object when provided.")
@@ -283,7 +305,8 @@ def load_model_config(spec: dict[str, Any]) -> dict[str, Any]:
     if config_path:
         file_config = read_json_file(Path(config_path).expanduser(), required=True)
     else:
-        file_config = read_json_file(default_config_path())
+        discovered_path, required = discover_config_path()
+        file_config = read_json_file(discovered_path, required=required)
     return merge_config(file_config, spec)
 
 
@@ -519,7 +542,7 @@ def build_tasks(spec: dict[str, Any]) -> tuple[list[WorkerTask], int]:
     pi_settings = load_pi_settings()
 
     max_concurrency = as_int(
-        spec.get("max_concurrency"),
+        config.get("max_concurrency"),
         default=DEFAULT_MAX_CONCURRENCY,
         name="max_concurrency",
     )

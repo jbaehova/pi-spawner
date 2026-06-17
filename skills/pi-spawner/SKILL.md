@@ -2,7 +2,7 @@
 name: pi-spawner
 description: Delegate host coding-agent subtasks to read-by-default Pi CLI model workers with optional direct-write permission, provider/model/thinking aliases, routes, parallel execution, write capture, and optional session continuity. Use when Codex, Claude Code, Cursor, Hermes, or another Agent Skills-compatible host should consult specialist models for writing, design critique, code review, planning, alternative patches, direct edits, or model comparison.
 metadata:
-  compatibility: Requires Python 3.10+, the pi CLI on PATH, and provider authentication for selected models. Designed for Agent Skills-compatible coding agents.
+  compatibility: Prefer the npm-installed pi-spawner CLI. Requires Node 20+, Python 3.10+, the pi CLI on PATH, and provider authentication for selected models. Designed for Agent Skills-compatible coding agents.
 ---
 
 # Pi Spawner
@@ -15,11 +15,26 @@ Use this skill when the current host coding agent should keep top-level control 
 - Treat Pi workers as subordinate subagents. Read tasks are advisory; write tasks may edit files directly, but the host agent reviews the captured filesystem changes.
 - Prefer one-shot workers for isolated questions. Use a stable `session_id` only when the same worker needs continuity across related tasks.
 - Run at most 3 read workers concurrently by default unless the user explicitly asks for a different limit. If any task uses `permission: "write"`, the wrapper runs all tasks sequentially so each worker's changes can be attributed.
+- Treat `max_concurrency` in `~/.pi/pi-spawner/models.json` as the user's default read-worker limit. Top-level spec `max_concurrency` may override it for a single run.
 - Keep Pi workers on `permission: "read"` by default with `read,grep,find,ls`. Use `permission: "write"` only when direct edits are intended; it enables `edit,write` but never `bash`.
+
+## Preflight
+
+If setup looks incomplete, ask the user to run:
+
+```bash
+pi-spawner doctor
+```
+
+The doctor command checks for the Pi CLI, Python 3.10+, provider credentials, model catalog access, and a valid Pi Spawner config. If it reports a failed step, do not try to work around that failure by silently switching providers or models.
 
 ## Model Selection
 
-Use the bundled `models.json` first. Resolve it from this skill root, not from the user's current working directory.
+Prefer the user config created by the npm CLI at `~/.pi/pi-spawner/models.json`. Config precedence is:
+
+```text
+spec config_path > PI_SPAWNER_CONFIG > ~/.pi/pi-spawner/models.json > bundled models.json
+```
 
 Selection priority for each worker:
 
@@ -52,10 +67,10 @@ If no explicit alias/model and no clear route are present, use `default_route` f
 
 ## Quick Start
 
-Use the bundled wrapper instead of hand-assembling multiple `pi` commands. Reference scripts relative to this skill root; when running from another directory, use the absolute installed path to `scripts/pi_delegate.py`.
+Use the global CLI instead of hand-assembling multiple `pi` commands. It injects the configured `~/.pi/pi-spawner/models.json` path when the spec does not set `config_path`.
 
 ```bash
-python3 scripts/pi_delegate.py --dry-run <<'JSON'
+pi-spawner delegate --dry-run <<'JSON'
 {
   "cwd": "/path/to/repo",
   "orchestrator_name": "Codex",
@@ -96,7 +111,7 @@ Provide a JSON object on stdin or with `--spec path.json`.
 Top-level fields:
 
 - `cwd`: Working directory for Pi. Defaults to the current directory.
-- `config_path`: Optional path to a different `models.json`.
+- `config_path`: Optional path to a different `models.json`. If omitted, `pi-spawner delegate` uses `~/.pi/pi-spawner/models.json` when available.
 - `orchestrator_name`: Optional host label used in Pi worker prompts. Defaults to `the host coding agent`.
 - `alias`: Default alias for tasks that do not specify `alias` or `model`.
 - `model`: Default model for tasks that do not specify `alias` or `model`.
@@ -106,7 +121,7 @@ Top-level fields:
 - `default_route`: Default route when tasks do not specify `route`.
 - `aliases`: Optional object that overrides or adds alias entries from `models.json`.
 - `routes`: Optional object that overrides or adds route entries from `models.json`.
-- `max_concurrency`: Parallel worker limit. Defaults to `3`.
+- `max_concurrency`: Per-run parallel read-worker limit. If omitted, the config-level `max_concurrency` is used. Any write-enabled task forces sequential execution.
 - `timeout_seconds`: Per-worker timeout. Defaults to `600`.
 - `session_dir`: Pi session directory for stateful workers. Defaults to `~/.pi/pi-spawner-workers`. When omitted, stateful tasks automatically use a non-empty legacy `~/.pi/codex-workers` directory for compatibility. Explicit `session_dir` always wins.
 - `tasks`: Required list of worker tasks.

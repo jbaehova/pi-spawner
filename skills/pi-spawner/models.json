@@ -1,5 +1,6 @@
 {
   "default_route": "code",
+  "max_concurrency": 3,
   "defaults": {
     "provider": null,
     "model": null,

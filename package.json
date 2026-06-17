@@ -1,0 +1,54 @@
+{
+  "name": "pi-spawner",
+  "version": "0.3.0",
+  "description": "CLI and TUI settings manager for delegating coding-agent subtasks to Pi CLI model workers.",
+  "type": "module",
+  "bin": {
+    "pi-spawner": "dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "!dist/*.test.*",
+    "skills/",
+    "assets/",
+    "README.md",
+    "README.*.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test 'dist/*.test.js'",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "pi",
+    "agent-skills",
+    "codex",
+    "claude-code",
+    "cursor",
+    "subagents",
+    "models",
+    "tui"
+  ],
+  "author": {
+    "name": "Johnny Bae",
+    "url": "https://github.com/jbaehova"
+  },
+  "homepage": "https://github.com/jbaehova/pi-spawner",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jbaehova/pi-spawner.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.7",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

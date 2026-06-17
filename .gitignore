@@ -1,4 +1,13 @@
 .DS_Store
+node_modules/
+*.tgz
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.env
+.env.*
+!.env.example
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -8,6 +17,9 @@ __pycache__/
 venv/
 build/
 dist/
+coverage/
+.nyc_output/
+*.tsbuildinfo
 *.egg-info/
 pi-spawner-artifacts/
 .agents/

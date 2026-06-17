@@ -1,26 +1,27 @@
 <h1 align="center">PI-SPAWNER</h1>
 
 <p align="center">
-  <strong>Plugin for delegating work to Pi Agent model workers</strong>
+  <strong>Language</strong><br>
+  <a href="README.md"><strong>English</strong></a> |
+  <a href="README.zh-CN.md">中文</a> |
+  <a href="README.ko.md">한국어</a> |
+  <a href="README.es.md">Español</a> |
+  <a href="README.ja.md">日本語</a>
 </p>
 
 <p align="center">
-  <em>The host agent stays in control. Pi workers read by default and can write only when explicitly allowed. Available for Codex, Claude Code, Cursor, Hermes Agent, and other Agent Skills hosts.</em>
+  <strong>NPM CLI and TUI settings manager for Pi Agent model workers</strong>
 </p>
 
 <p align="center">
+  <em>Configure aliases, routes, providers, models, and thinking levels once, then let Codex, Claude Code, Cursor, Hermes Agent, or another Agent Skills host call the same Pi Spawner delegation CLI.</em>
+</p>
+
+<p align="center">
+  <img alt="Node 20+" src="https://img.shields.io/badge/Node-20%2B-43853D?style=flat-square&logo=node.js&logoColor=white">
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white">
   <img alt="Pi CLI" src="https://img.shields.io/badge/Pi-CLI-2563EB?style=flat-square">
-  <img alt="Agent Skills" src="https://img.shields.io/badge/Agent-Skills-111827?style=flat-square">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-C5A800?style=flat-square">
-</p>
-
-<p align="center">
-  <a href="#what-it-does">Features</a> &bull;
-  <a href="#install">Install</a> &bull;
-  <a href="#repository-layout">Layout</a> &bull;
-  <a href="#model-selection">Model Selection</a> &bull;
-  <a href="#cli-usage">CLI Usage</a>
 </p>
 
 <p align="center">
@@ -29,134 +30,96 @@
 
 ## What It Does
 
-- Runs multiple Pi workers concurrently and returns normalized JSON
-- Keeps Pi workers read-only by default with `read,grep,find,ls`
-- Supports explicit direct-write tasks with `edit,write` and captured before/after filesystem changes
-- Supports per-worker provider, model, thinking level, and session continuity
-- Resolves simple model aliases such as `kimi`, `deepseek`, `qwen`, and `gemini`
-- Falls back to route defaults for `design`, `writing`, `code`, `review`, and `plan`
-- Avoids silent model fallback when a provider or model cannot run
+- Installs a global `pi-spawner` CLI through npm.
+- Opens a terminal settings manager with `pi-spawner`.
+- Shows friendly preflight guidance with `pi-spawner doctor`.
+- Stores user settings in `~/.pi/pi-spawner/models.json`.
+- Manages aliases such as `kimi`, `deepseek`, `qwen`, and `gemini`.
+- Maps task routes such as `code`, `plan`, `writing`, `review`, and `design`.
+- Generates Codex, Claude Code, Cursor, and Hermes Agent adapters that call `pi-spawner delegate`.
+- Keeps Pi workers read-only by default, with explicit write tasks captured for host review.
 
 ## Install
 
-Prereqs: Python 3.10+, an existing [Pi Coding Agent](https://pi.dev/) installation with `pi` on `PATH`, and provider authentication already configured for the models you will delegate to, such as Pi `/login`, `~/.pi/agent/auth.json`, or `OPENROUTER_API_KEY`.
+Prereqs:
 
-Pi Spawner does not install Pi or set up provider credentials for you; it delegates to the Pi CLI that is already configured on the host.
+- Node 20+
+- Python 3.10+
+- Pi CLI installed with `pi` on `PATH`
+- At least one Pi provider/API key configured before delegation
 
-Pi Spawner keeps the canonical skill/runtime at `skills/pi-spawner/`. Install it once per host.
-
-### Codex
-
-```bash
-codex plugin marketplace add jbaehova/pi-spawner
-codex plugin add pi-spawner@pi-spawner
-```
-
-Use: `Use $pi-spawner to ask Kimi and DeepSeek to review this diff.`
-
-For local development, replace `jbaehova/pi-spawner` with `/absolute/path/to/pi-spawner`.
-
-### Claude Code
+Install the CLI:
 
 ```bash
-claude --plugin-dir /absolute/path/to/pi-spawner
+npm install -g pi-spawner
 ```
 
-Use: `/pi-spawner:pi-spawner Ask Kimi and DeepSeek to review this diff.`
-
-### Cursor
+Check setup:
 
 ```bash
-mkdir -p ~/.cursor/plugins/local
-ln -s /absolute/path/to/pi-spawner ~/.cursor/plugins/local/pi-spawner
+pi-spawner doctor
 ```
 
-Reload Cursor, then use: `/pi-spawner Ask Kimi and DeepSeek to review this diff.`
-
-### Hermes Agent
+Open the settings manager:
 
 ```bash
-hermes skills install jbaehova/pi-spawner/skills/pi-spawner
+pi-spawner
 ```
 
-Use: `/pi-spawner Ask Kimi and DeepSeek to review this diff.`
+If `doctor` reports a missing step, fix that Pi/Python/provider setup first and rerun it. Pi Spawner does not install Pi or manage provider secrets; it detects the Pi setup and gives concrete next steps.
 
-## Repository Layout
+## Settings Manager
+
+The TUI starts with a doctor screen, then lets you inspect and edit:
+
+- `Aliases`: provider/model/thinking triples
+- `Routes`: task type to alias/model mappings
+- `Runtime settings`: default parallel read-worker limit
+- `Model picker`: searchable `pi --list-models` entries filtered to authenticated providers
+- `Hosts`: generated adapter paths and install commands for Codex, Claude Code, Cursor, and Hermes Agent
+
+Settings live at:
 
 ```text
-.codex-plugin/plugin.json
-.claude-plugin/plugin.json
-.claude-plugin/marketplace.json
-.cursor-plugin/plugin.json
-skills.sh.json
-assets/pi-spawner.svg
-plugin -> .
-skills/pi-spawner/SKILL.md
-skills/pi-spawner/agents/openai.yaml
-skills/pi-spawner/models.json
-skills/pi-spawner/scripts/pi_delegate.py
+~/.pi/pi-spawner/models.json
 ```
 
-`skills/pi-spawner/` is the canonical Agent Skill. The platform-specific manifest directories are thin wrappers around the same implementation.
-
-`plugin` is a compatibility symlink to the repository root. It keeps the installable package at the root while giving marketplace entries a non-empty source path.
-
-## Model Selection
-
-Edit `skills/pi-spawner/models.json` to choose your own defaults.
-
-Resolution order for each worker is:
+Config precedence is:
 
 ```text
-task alias/model > top-level alias/model > task route > default route > config defaults > Pi settings > Pi CLI defaults
+spec config_path > PI_SPAWNER_CONFIG > ~/.pi/pi-spawner/models.json > bundled defaults
 ```
 
-Thinking is resolved separately:
+## Host Adapters
 
-```text
-task thinking > top-level thinking > selected alias/model thinking > config defaults > Pi settings
+Generate adapters:
+
+```bash
+pi-spawner hosts
 ```
 
-The starter config defines these routes:
+The generated adapters live under `~/.pi/pi-spawner/adapters`. They are intentionally thin: each host skill/plugin calls the global `pi-spawner delegate` command, so updating the npm package updates the runtime without rewriting host prompts.
 
-- `code`: `kimi`
-- `plan`: `kimi`
-- `writing`: `deepseek`
-- `review`: `deepseek`
-- `design`: `gemini`
+Example generated guide:
 
-Use explicit aliases when you want exact control:
-
-```json
-{
-  "tasks": [
-    {
-      "id": "impl",
-      "alias": "kimi",
-      "route": "code",
-      "prompt": "Review the auth refactor and propose a minimal patch."
-    },
-    {
-      "id": "copy",
-      "alias": "deepseek",
-      "route": "writing",
-      "prompt": "Rewrite the onboarding copy."
-    }
-  ]
-}
+```bash
+codex plugin add ~/.pi/pi-spawner/adapters/codex
+claude --plugin-dir ~/.pi/pi-spawner/adapters/claude-code
+ln -sfn ~/.pi/pi-spawner/adapters/cursor ~/.cursor/plugins/local/pi-spawner
+hermes skills install ~/.pi/pi-spawner/adapters/hermes/skills/pi-spawner
 ```
 
-If `alias` or `model` is present, it wins over `route`.
+The repository itself is not the install target for host plugins. Install the npm package, then let `pi-spawner hosts` generate host-specific adapters that call the installed CLI.
 
 ## CLI Usage
 
 Dry-run a delegation before calling models:
 
 ```bash
-python3 skills/pi-spawner/scripts/pi_delegate.py --dry-run <<'JSON'
+pi-spawner delegate --dry-run <<'JSON'
 {
   "cwd": "/path/to/repo",
-  "orchestrator_name": "Claude Code",
+  "orchestrator_name": "Codex",
   "tasks": [
     {
       "id": "design",
@@ -180,28 +143,87 @@ python3 skills/pi-spawner/scripts/pi_delegate.py --dry-run <<'JSON'
 JSON
 ```
 
-Permissions have two tiers:
+Run without `--dry-run` to execute workers.
 
-- `read` is the default and enables `read,grep,find,ls`.
-- `write` enables `read,grep,find,ls,edit,write`, never `bash`. If any task uses `write`, all tasks run sequentially so Pi's direct edits can be attributed.
+Useful commands:
 
-Run the same spec without `--dry-run` to execute the workers. The wrapper returns:
+```bash
+pi-spawner doctor --json
+pi-spawner models openrouter
+pi-spawner config path
+pi-spawner config init --reset
+pi-spawner config set max_concurrency 3
+pi-spawner aliases list
+pi-spawner aliases set kimi --provider openrouter --model moonshotai/kimi-k2.6 --thinking high
+pi-spawner routes set review deepseek
+```
 
-- `results[].summary`
-- `results[].diff` for model-output diffs
-- `results[].writes` for actual filesystem changes made by write tasks
-- `results[].raw_output`
-- `results[].errors`
-- `results[].diagnostics`
-- `results[].command`
+## Model Selection
 
-For write tasks, `results[].writes` includes `changed_files`, per-file before/after SHA-256 hashes and sizes, `diff` for changed text files, `capture_errors`, and `complete`. Pi Spawner does not require a git repository for this capture; it snapshots regular files under `cwd` before and after each write task.
+Resolution order for each worker is:
 
-Stateful workers use `~/.pi/pi-spawner-workers` by default. When `session_id` is set and an existing legacy `~/.pi/codex-workers` directory contains sessions, Pi Spawner automatically uses that legacy directory for compatibility. An explicit `session_dir` always wins.
+```text
+task alias/model > top-level alias/model > task route > default route > config defaults > Pi settings > Pi CLI defaults
+```
 
-## Failure Behavior
+Thinking is resolved separately:
 
-Pi Spawner does not silently switch models. If a provider is not authenticated, a model is unavailable, or thinking is unsupported, the wrapper returns a structured failure so the host agent can ask which alias, route, provider, or auth setup to use next.
+```text
+task thinking > top-level thinking > selected alias/model thinking > config defaults > Pi settings
+```
+
+Read-only workers run concurrently up to `max_concurrency`, which defaults to `3`. Any run containing a write-enabled task still executes sequentially so direct file changes can be attributed.
+
+Pi Spawner does not silently switch models. If a provider is not authenticated, a model is unavailable, or thinking is unsupported, the wrapper returns a structured failure so the host agent can ask which alias, route, provider, or auth setup should be used next.
+
+## Repository Layout
+
+```text
+package.json
+src/
+dist/
+skills/pi-spawner/SKILL.md
+skills/pi-spawner/models.json
+skills/pi-spawner/scripts/pi_delegate.py
+assets/
+```
+
+`src/` is the npm CLI and TUI layer. `skills/pi-spawner/scripts/pi_delegate.py` remains the delegation engine for v1 compatibility.
+
+## Development
+
+```bash
+npm install
+npm test
+```
+
+Useful local checks:
+
+```bash
+node dist/cli.js doctor
+node dist/cli.js delegate --dry-run < spec.json
+python3 /Users/johnnybae/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/pi-spawner
+```
+
+## Publishing
+
+The public npm package is unscoped:
+
+```bash
+npm publish --access public
+```
+
+The GitHub Packages variant must be scoped to the GitHub owner. The included GitHub Actions workflow publishes the same version as `@jbaehova/pi-spawner` by rewriting `package.json` only inside CI.
+
+Before pushing a release tag, add an npm automation token as the repository secret `NPM_TOKEN`. GitHub Packages uses the workflow `GITHUB_TOKEN`.
+
+```bash
+node -p "require('./package.json').version"
+npm test
+npm pack --dry-run
+git tag v0.3.0
+git push origin HEAD --tags
+```
 
 ## License
 
