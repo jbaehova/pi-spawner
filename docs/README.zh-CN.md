@@ -2,11 +2,11 @@
 
 <p align="center">
   <strong>语言</strong><br>
-  <a href="README.md">English</a> |
-  <a href="README.zh-CN.md"><strong>中文</strong></a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.ja.md">日本語</a>
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/README.md">English</a> |
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/docs/README.zh-CN.md"><strong>中文</strong></a> |
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/docs/README.ko.md">한국어</a> |
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/docs/README.es.md">Español</a> |
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/docs/README.ja.md">日本語</a>
 </p>
 
 <p align="center">
@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/pi-spawner-banner.png" alt="Pi Spawner banner" width="70%">
+  <img src="../assets/pi-spawner-banner.png" alt="Pi Spawner banner" width="70%">
 </p>
 
 ## 功能
@@ -140,4 +140,4 @@ npm test
 
 ## 许可证
 
-MIT。见 [LICENSE](LICENSE)。
+MIT。见 [LICENSE](../LICENSE)。

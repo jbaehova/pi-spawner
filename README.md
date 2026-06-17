@@ -2,11 +2,11 @@
 
 <p align="center">
   <strong>Language</strong><br>
-  <a href="README.md"><strong>English</strong></a> |
-  <a href="README.zh-CN.md">中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.ja.md">日本語</a>
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/README.md"><strong>English</strong></a> |
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/docs/README.zh-CN.md">中文</a> |
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/docs/README.ko.md">한국어</a> |
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/docs/README.es.md">Español</a> |
+  <a href="https://github.com/jbaehova/pi-spawner/blob/main/docs/README.ja.md">日本語</a>
 </p>
 
 <p align="center">
@@ -186,6 +186,7 @@ skills/pi-spawner/SKILL.md
 skills/pi-spawner/models.json
 skills/pi-spawner/scripts/pi_delegate.py
 assets/
+docs/
 ```
 
 `src/` is the npm CLI and TUI layer. `skills/pi-spawner/scripts/pi_delegate.py` remains the delegation engine for v1 compatibility.

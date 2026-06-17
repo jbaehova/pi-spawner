@@ -1,6 +1,6 @@
 {
   "name": "pi-spawner",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "CLI and TUI settings manager for delegating coding-agent subtasks to Pi CLI model workers.",
   "type": "module",
   "bin": {
@@ -12,7 +12,6 @@
     "skills/",
     "assets/",
     "README.md",
-    "README.*.md",
     "LICENSE"
   ],
   "scripts": {
