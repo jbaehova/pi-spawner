@@ -27,7 +27,7 @@
 - 运行 `pi-spawner` 打开终端设置管理器。
 - 使用 `pi-spawner doctor` 检查 Pi、Python、provider 和 model catalog。
 - 用户设置保存在 `~/.pi/pi-spawner/models.json`。
-- 管理 `kimi`、`deepseek`、`qwen`、`gemini` 等 alias。
+- 管理 `sonnet`、`gpt`、`kimi`、`deepseek`、`qwen`、`gemini` 等 alias。
 - 将 `code`、`plan`、`writing`、`review`、`design` route 映射到 alias/model。
 - 生成 Codex、Claude Code、Cursor 和 Hermes Agent adapter。
 - Pi worker 默认只读；只有显式 write task 才能写入，并会捕获实际文件变更。
@@ -37,7 +37,7 @@
 要求：
 
 - Node 20+
-- Python 3.10+
+- Python 3.9+
 - `PATH` 中可用的 Pi CLI
 - delegation 前至少配置一个 Pi provider/API key
 
@@ -51,13 +51,13 @@ pi-spawner
 
 ## 设置管理器
 
-TUI 会先显示 doctor 页面，然后可管理：
+TUI 现在是分步 setup wizard。它会依次执行 doctor 检查、模型 alias、route、read-worker 并行数、host 检测、多 host 选择和安装结果确认。支持方向键、Enter、Esc 和 Ctrl+C。
 
 - `Aliases`: provider/model/thinking 组合
 - `Routes`: 任务类型到 alias/model 的映射
 - `Runtime settings`: 默认并行 read-worker 限制
-- `Model picker`: 基于已认证 provider 搜索 `pi --list-models`
-- `Hosts`: Codex、Claude Code、Cursor、Hermes Agent adapter 生成指南
+- `Model picker`: 基于已认证 provider 搜索完整 `pi --list-models` catalog
+- `Hosts`: 检测已安装的 Codex、Claude Code、Cursor、Hermes Agent，并为选中的 host 安装 adapter
 
 配置文件：
 
@@ -77,11 +77,12 @@ spec config_path > PI_SPAWNER_CONFIG > ~/.pi/pi-spawner/models.json > bundled de
 pi-spawner hosts
 ```
 
-生成的 adapter 位于 `~/.pi/pi-spawner/adapters`。不要把仓库本身作为 plugin 安装；先安装 npm package，再使用 `pi-spawner hosts` 生成的 adapter。
+推荐运行 `pi-spawner` 并使用 setup wizard。wizard 会检测已安装的 host，让你多选，然后执行需要的安装步骤。
 
 ```bash
-codex plugin add ~/.pi/pi-spawner/adapters/codex
-claude --plugin-dir ~/.pi/pi-spawner/adapters/claude-code
+codex plugin add pi-spawner@personal
+claude plugin marketplace add ~/.pi/pi-spawner/adapters/claude-marketplace --scope user
+claude plugin install pi-spawner@pi-spawner --scope user
 ln -sfn ~/.pi/pi-spawner/adapters/cursor ~/.cursor/plugins/local/pi-spawner
 hermes skills install ~/.pi/pi-spawner/adapters/hermes/skills/pi-spawner
 ```
@@ -113,7 +114,7 @@ pi-spawner config path
 pi-spawner config init --reset
 pi-spawner config set max_concurrency 3
 pi-spawner aliases list
-pi-spawner aliases set kimi --provider openrouter --model moonshotai/kimi-k2.6 --thinking high
+pi-spawner aliases set sonnet --provider openrouter --model '~anthropic/claude-sonnet-latest' --thinking high
 pi-spawner routes set review deepseek
 ```
 

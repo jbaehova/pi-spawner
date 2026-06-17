@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { validateConfig } from "./config.js";
+import { routeProviderIssues, validateConfig } from "./config.js";
 import { listModels } from "./models.js";
 import { piAgentDir, userConfigPath } from "./paths.js";
 import { DoctorCheck, DoctorReport } from "./types.js";
@@ -50,7 +50,7 @@ export async function runDoctor(options: { skipModelList?: boolean } = {}): Prom
   const python = commandVersion(pythonBinary, ["--version"]);
   const pythonVersion = parsePythonVersion(python.output);
   checks.push(
-    python.ok && pythonVersion && isAtLeastPython310(pythonVersion)
+    python.ok && pythonVersion && isAtLeastSupportedPython(pythonVersion)
       ? {
           id: "python",
           title: "Python runtime",
@@ -62,9 +62,9 @@ export async function runDoctor(options: { skipModelList?: boolean } = {}): Prom
           title: "Python runtime",
           status: "fail",
           detail: python.ok
-            ? `Found ${python.output || pythonBinary}, but Pi Spawner delegation requires Python 3.10+.`
+            ? `Found ${python.output || pythonBinary}, but Pi Spawner delegation requires Python 3.9+.`
             : `Could not run ${pythonBinary}.`,
-          action: "Install Python 3.10+ or set PI_SPAWNER_PYTHON to a compatible interpreter."
+          action: "Install Python 3.9+ or set PI_SPAWNER_PYTHON to a compatible interpreter."
         }
   );
 
@@ -86,7 +86,7 @@ export async function runDoctor(options: { skipModelList?: boolean } = {}): Prom
         }
   );
 
-  checks.push(configCheck());
+  checks.push(configCheck(providers));
 
   let modelCount = 0;
   if (options.skipModelList) {
@@ -215,7 +215,7 @@ function hasCredentialLikeValue(value: unknown): boolean {
   return Boolean(value);
 }
 
-function configCheck(): DoctorCheck {
+function configCheck(providers: string[]): DoctorCheck {
   const path = userConfigPath();
   if (!existsSync(path)) {
     return {
@@ -236,6 +236,16 @@ function configCheck(): DoctorCheck {
         status: "fail",
         detail: `Config validation failed: ${validated.errors.join("; ")}`,
         action: "Back up the file, then run `pi-spawner config init --reset` if you want to restore defaults."
+      };
+    }
+    const providerIssues = routeProviderIssues(validated.config, providers);
+    if (providerIssues.length) {
+      return {
+        id: "config",
+        title: "Pi Spawner config",
+        status: "warn",
+        detail: `Loaded ${path}, but configured routes/defaults target unauthenticated providers: ${providerIssues.join(", ")}.`,
+        action: "Run `pi-spawner` and choose a model from the detected provider catalog, or update aliases/routes manually."
       };
     }
     return {
@@ -266,7 +276,7 @@ function commandVersion(command: string, args: string[]): { ok: boolean; output:
   };
 }
 
-function parsePythonVersion(output: string): [number, number, number] | null {
+export function parsePythonVersion(output: string): [number, number, number] | null {
   const match = /Python\s+(\d+)\.(\d+)\.(\d+)/.exec(output || "");
   if (!match) {
     return null;
@@ -274,8 +284,8 @@ function parsePythonVersion(output: string): [number, number, number] | null {
   return [Number(match[1]), Number(match[2]), Number(match[3])];
 }
 
-function isAtLeastPython310(version: [number, number, number]): boolean {
-  return version[0] > 3 || (version[0] === 3 && version[1] >= 10);
+export function isAtLeastSupportedPython(version: [number, number, number]): boolean {
+  return version[0] > 3 || (version[0] === 3 && version[1] >= 9);
 }
 
 function statusIcon(status: "ok" | "warn" | "fail"): string {

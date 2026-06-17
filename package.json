@@ -1,6 +1,6 @@
 {
   "name": "pi-spawner",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "CLI and TUI settings manager for delegating coding-agent subtasks to Pi CLI model workers.",
   "type": "module",
   "bin": {
@@ -49,5 +49,9 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.5.1",
+    "@inquirer/search": "^4.2.1"
   }
 }

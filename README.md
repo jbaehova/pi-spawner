@@ -19,7 +19,7 @@
 
 <p align="center">
   <img alt="Node 20+" src="https://img.shields.io/badge/Node-20%2B-43853D?style=flat-square&logo=node.js&logoColor=white">
-  <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white">
+  <img alt="Python 3.9+" src="https://img.shields.io/badge/Python-3.9%2B-3776AB?style=flat-square&logo=python&logoColor=white">
   <img alt="Pi CLI" src="https://img.shields.io/badge/Pi-CLI-2563EB?style=flat-square">
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-C5A800?style=flat-square">
 </p>
@@ -34,7 +34,7 @@
 - Opens a terminal settings manager with `pi-spawner`.
 - Shows friendly preflight guidance with `pi-spawner doctor`.
 - Stores user settings in `~/.pi/pi-spawner/models.json`.
-- Manages aliases such as `kimi`, `deepseek`, `qwen`, and `gemini`.
+- Manages aliases such as `sonnet`, `gpt`, `kimi`, `deepseek`, `qwen`, and `gemini`.
 - Maps task routes such as `code`, `plan`, `writing`, `review`, and `design`.
 - Generates Codex, Claude Code, Cursor, and Hermes Agent adapters that call `pi-spawner delegate`.
 - Keeps Pi workers read-only by default, with explicit write tasks captured for host review.
@@ -44,7 +44,7 @@
 Prereqs:
 
 - Node 20+
-- Python 3.10+
+- Python 3.9+
 - Pi CLI installed with `pi` on `PATH`
 - At least one Pi provider/API key configured before delegation
 
@@ -70,13 +70,16 @@ If `doctor` reports a missing step, fix that Pi/Python/provider setup first and 
 
 ## Settings Manager
 
-The TUI starts with a doctor screen, then lets you inspect and edit:
+The TUI opens a guided setup wizard. It starts with doctor checks, then walks through model aliases,
+routes, the read-only worker parallel limit, host detection, multi-select host installation, and install results.
+Prompts support arrow keys, Enter, Esc, and Ctrl+C.
+If aliases/routes target providers that are not currently authenticated, the wizard offers to pick one available model and repair the default routes.
 
 - `Aliases`: provider/model/thinking triples
 - `Routes`: task type to alias/model mappings
 - `Runtime settings`: default parallel read-worker limit
-- `Model picker`: searchable `pi --list-models` entries filtered to authenticated providers
-- `Hosts`: generated adapter paths and install commands for Codex, Claude Code, Cursor, and Hermes Agent
+- `Model picker`: searchable full `pi --list-models` catalog filtered to authenticated providers
+- `Hosts`: detected Codex, Claude Code, Cursor, and Hermes Agent installs, with selected adapters installed by the wizard
 
 Settings live at:
 
@@ -98,13 +101,18 @@ Generate adapters:
 pi-spawner hosts
 ```
 
-The generated adapters live under `~/.pi/pi-spawner/adapters`. They are intentionally thin: each host skill/plugin calls the global `pi-spawner delegate` command, so updating the npm package updates the runtime without rewriting host prompts.
+The recommended path is to run `pi-spawner` and use the setup wizard. It detects installed hosts,
+lets you select one or more, then runs the required install steps. Generated adapters are thin:
+each host skill/plugin calls the global `pi-spawner delegate` command, so updating the npm package
+updates the runtime without rewriting host prompts.
+Set `PI_SPAWNER_ADAPTER_COMMAND` before running the wizard if adapters must call a custom wrapper.
 
-Example generated guide:
+Manual fallback:
 
 ```bash
-codex plugin add ~/.pi/pi-spawner/adapters/codex
-claude --plugin-dir ~/.pi/pi-spawner/adapters/claude-code
+codex plugin add pi-spawner@personal
+claude plugin marketplace add ~/.pi/pi-spawner/adapters/claude-marketplace --scope user
+claude plugin install pi-spawner@pi-spawner --scope user
 ln -sfn ~/.pi/pi-spawner/adapters/cursor ~/.cursor/plugins/local/pi-spawner
 hermes skills install ~/.pi/pi-spawner/adapters/hermes/skills/pi-spawner
 ```
@@ -154,7 +162,7 @@ pi-spawner config path
 pi-spawner config init --reset
 pi-spawner config set max_concurrency 3
 pi-spawner aliases list
-pi-spawner aliases set kimi --provider openrouter --model moonshotai/kimi-k2.6 --thinking high
+pi-spawner aliases set sonnet --provider openrouter --model '~anthropic/claude-sonnet-latest' --thinking high
 pi-spawner routes set review deepseek
 ```
 
@@ -222,7 +230,7 @@ Before pushing a release tag, add an npm automation token as the repository secr
 node -p "require('./package.json').version"
 npm test
 npm pack --dry-run
-git tag v0.3.0
+git tag "v$(node -p "require('./package.json').version")"
 git push origin HEAD --tags
 ```
 

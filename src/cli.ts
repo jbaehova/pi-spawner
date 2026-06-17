@@ -214,10 +214,10 @@ function printHelp(): void {
   process.stdout.write(`pi-spawner
 
 Usage:
-  pi-spawner                         Open the TUI settings manager
+  pi-spawner                         Open the guided TUI setup wizard
   pi-spawner doctor [--json]          Check Pi/Python/provider/model readiness
   pi-spawner delegate [--dry-run]     Run the delegation JSON API through the global CLI
-  pi-spawner hosts                    Generate Codex/Claude Code/Cursor adapters
+  pi-spawner hosts                    Generate host adapters and show install guidance
   pi-spawner models [search]          List models from pi --list-models
   pi-spawner config path              Print active config path
   pi-spawner config init [--reset]    Create or reset ~/.pi/pi-spawner/models.json

@@ -27,7 +27,7 @@
 - Abre un gestor de configuración en terminal con `pi-spawner`.
 - Muestra una verificación amable con `pi-spawner doctor`.
 - Guarda la configuración en `~/.pi/pi-spawner/models.json`.
-- Gestiona aliases como `kimi`, `deepseek`, `qwen` y `gemini`.
+- Gestiona aliases como `sonnet`, `gpt`, `kimi`, `deepseek`, `qwen` y `gemini`.
 - Mapea routes como `code`, `plan`, `writing`, `review` y `design`.
 - Genera adapters para Codex, Claude Code, Cursor y Hermes Agent.
 - Mantiene los workers de Pi en modo solo lectura por defecto; las tareas con escritura deben pedirse explícitamente y sus cambios se capturan.
@@ -37,7 +37,7 @@
 Requisitos:
 
 - Node 20+
-- Python 3.10+
+- Python 3.9+
 - Pi CLI disponible en `PATH`
 - Al menos un provider/API key configurado en Pi antes de delegar
 
@@ -51,13 +51,15 @@ Si `doctor` muestra un paso pendiente, termina primero la configuración de Pi/P
 
 ## Gestor de Configuración
 
-La TUI empieza con una pantalla doctor y permite editar:
+La TUI es un setup wizard por pasos. Recorre doctor, aliases de modelos, routes, concurrencia de read-workers,
+detección de hosts, selección múltiple de hosts e instalación con resultados. Soporta flechas,
+Enter, Esc y Ctrl+C.
 
 - `Aliases`: combinaciones provider/model/thinking
 - `Routes`: mapeos de tipo de tarea a alias/model
 - `Runtime settings`: límite paralelo por defecto para read-workers
-- `Model picker`: búsqueda de `pi --list-models` filtrada por providers autenticados
-- `Hosts`: comandos para generar adapters de Codex, Claude Code, Cursor y Hermes Agent
+- `Model picker`: búsqueda del catalog completo de `pi --list-models` filtrada por providers autenticados
+- `Hosts`: detección de Codex, Claude Code, Cursor y Hermes Agent instalados, con instalación de adapters para los hosts seleccionados
 
 Archivo de configuración:
 
@@ -77,11 +79,12 @@ spec config_path > PI_SPAWNER_CONFIG > ~/.pi/pi-spawner/models.json > bundled de
 pi-spawner hosts
 ```
 
-Los adapters generados quedan en `~/.pi/pi-spawner/adapters`. No instales este repositorio como plugin directamente; instala el paquete npm y usa los adapters generados por `pi-spawner hosts`.
+La ruta recomendada es ejecutar `pi-spawner` y usar el setup wizard. Detecta hosts instalados, permite seleccionar varios y ejecuta los pasos de instalación necesarios.
 
 ```bash
-codex plugin add ~/.pi/pi-spawner/adapters/codex
-claude --plugin-dir ~/.pi/pi-spawner/adapters/claude-code
+codex plugin add pi-spawner@personal
+claude plugin marketplace add ~/.pi/pi-spawner/adapters/claude-marketplace --scope user
+claude plugin install pi-spawner@pi-spawner --scope user
 ln -sfn ~/.pi/pi-spawner/adapters/cursor ~/.cursor/plugins/local/pi-spawner
 hermes skills install ~/.pi/pi-spawner/adapters/hermes/skills/pi-spawner
 ```
@@ -113,7 +116,7 @@ pi-spawner config path
 pi-spawner config init --reset
 pi-spawner config set max_concurrency 3
 pi-spawner aliases list
-pi-spawner aliases set kimi --provider openrouter --model moonshotai/kimi-k2.6 --thinking high
+pi-spawner aliases set sonnet --provider openrouter --model '~anthropic/claude-sonnet-latest' --thinking high
 pi-spawner routes set review deepseek
 ```
 

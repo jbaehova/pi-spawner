@@ -2,7 +2,7 @@
 name: pi-spawner
 description: Delegate host coding-agent subtasks to read-by-default Pi CLI model workers with optional direct-write permission, provider/model/thinking aliases, routes, parallel execution, write capture, and optional session continuity. Use when Codex, Claude Code, Cursor, Hermes, or another Agent Skills-compatible host should consult specialist models for writing, design critique, code review, planning, alternative patches, direct edits, or model comparison.
 metadata:
-  compatibility: Prefer the npm-installed pi-spawner CLI. Requires Node 20+, Python 3.10+, the pi CLI on PATH, and provider authentication for selected models. Designed for Agent Skills-compatible coding agents.
+  compatibility: Prefer the npm-installed pi-spawner CLI. Requires Node 20+, Python 3.9+, the pi CLI on PATH, and provider authentication for selected models. Designed for Agent Skills-compatible coding agents.
 ---
 
 # Pi Spawner
@@ -26,7 +26,7 @@ If setup looks incomplete, ask the user to run:
 pi-spawner doctor
 ```
 
-The doctor command checks for the Pi CLI, Python 3.10+, provider credentials, model catalog access, and a valid Pi Spawner config. If it reports a failed step, do not try to work around that failure by silently switching providers or models.
+The doctor command checks for the Pi CLI, Python 3.9+, provider credentials, model catalog access, and a valid Pi Spawner config. If it reports a failed step, do not try to work around that failure by silently switching providers or models.
 
 ## Model Selection
 
@@ -50,7 +50,9 @@ task thinking > top-level thinking > selected alias/model thinking > config defa
 
 Prefer explicit aliases when the user names a model family:
 
-- `kimi` or `kimi-k2`: code, implementation, long-context reasoning
+- `sonnet`: default code route for implementation and long-context reasoning
+- `gpt`: default planning route
+- `kimi` or `kimi-code`: implementation alternatives
 - `deepseek`: writing, review, alternative analysis
 - `qwen`: code and structured technical analysis
 - `gemini`: design critique, UI review, visual/product reasoning
@@ -130,7 +132,7 @@ Each task supports:
 
 - `id`: Stable result identifier.
 - `role`: Short worker role, such as `frontend design critic`.
-- `alias`: Alias from `models.json`, such as `kimi` or `deepseek`.
+- `alias`: Alias from `models.json`, such as `sonnet`, `gpt`, `kimi`, or `deepseek`.
 - `model`: Model alias, Pi model pattern, provider/model shorthand, or exact model ID.
 - `route`: One of `design`, `writing`, `code`, `review`, `plan`.
 - `provider`: Optional provider override for this task.
@@ -145,7 +147,7 @@ Each task supports:
 - Use `model` for exact overrides. It may be an alias, a Pi model pattern, or a provider/model shorthand.
 - If `model` contains `:high`, `:medium`, or another supported thinking suffix, the wrapper extracts it as a thinking default.
 - If `model` starts with a known Pi provider prefix and no provider is already selected, the wrapper splits that prefix into `--provider`.
-- If a selected alias includes `provider: openrouter`, OpenRouter model IDs such as `deepseek/deepseek-v3.2` stay intact.
+- If a selected alias includes `provider: openrouter`, OpenRouter model IDs such as `~anthropic/claude-sonnet-latest` stay intact.
 
 ## Failure Handling
 

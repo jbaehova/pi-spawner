@@ -27,7 +27,7 @@
 - `pi-spawner` でターミナル設定マネージャーを開きます。
 - `pi-spawner doctor` で Pi、Python、provider、model catalog を確認します。
 - ユーザー設定は `~/.pi/pi-spawner/models.json` に保存されます。
-- `kimi`、`deepseek`、`qwen`、`gemini` などの alias を管理します。
+- `sonnet`、`gpt`、`kimi`、`deepseek`、`qwen`、`gemini` などの alias を管理します。
 - `code`、`plan`、`writing`、`review`、`design` route を alias/model に割り当てます。
 - Codex、Claude Code、Cursor、Hermes Agent adapter を生成します。
 - Pi worker はデフォルトで read-only です。write task は明示的な指定が必要で、実際の変更内容を記録します。
@@ -37,7 +37,7 @@
 必要条件:
 
 - Node 20+
-- Python 3.10+
+- Python 3.9+
 - `PATH` で利用できる Pi CLI
 - delegation 前に少なくとも 1 つの Pi provider/API key を設定済みであること
 
@@ -51,13 +51,13 @@ pi-spawner
 
 ## 設定マネージャー
 
-TUI は doctor 画面から始まり、次の項目を編集できます。
+TUI は段階的な setup wizard です。doctor チェック、model alias、route、read-worker 並列数、host 検出、複数 host 選択、インストール結果確認まで 1 つの流れで進みます。矢印キー、Enter、Esc、Ctrl+C をサポートします。
 
 - `Aliases`: provider/model/thinking の組み合わせ
 - `Routes`: タスク種別から alias/model への割り当て
 - `Runtime settings`: read-worker のデフォルト並列数
-- `Model picker`: 認証済み provider に基づく `pi --list-models` 検索
-- `Hosts`: Codex、Claude Code、Cursor、Hermes Agent adapter の生成手順
+- `Model picker`: 認証済み provider に基づく完全な `pi --list-models` catalog 検索
+- `Hosts`: インストール済みの Codex、Claude Code、Cursor、Hermes Agent を検出し、選択した host に adapter をインストール
 
 設定ファイル:
 
@@ -77,11 +77,12 @@ spec config_path > PI_SPAWNER_CONFIG > ~/.pi/pi-spawner/models.json > bundled de
 pi-spawner hosts
 ```
 
-生成された adapter は `~/.pi/pi-spawner/adapters` に保存されます。この repository 自体を plugin として直接インストールせず、npm package をインストールしてから `pi-spawner hosts` が生成した adapter を使ってください。
+推奨フローは `pi-spawner` setup wizard です。wizard がインストール済み host を検出し、複数選択後に必要なインストール手順を実行します。
 
 ```bash
-codex plugin add ~/.pi/pi-spawner/adapters/codex
-claude --plugin-dir ~/.pi/pi-spawner/adapters/claude-code
+codex plugin add pi-spawner@personal
+claude plugin marketplace add ~/.pi/pi-spawner/adapters/claude-marketplace --scope user
+claude plugin install pi-spawner@pi-spawner --scope user
 ln -sfn ~/.pi/pi-spawner/adapters/cursor ~/.cursor/plugins/local/pi-spawner
 hermes skills install ~/.pi/pi-spawner/adapters/hermes/skills/pi-spawner
 ```
@@ -113,7 +114,7 @@ pi-spawner config path
 pi-spawner config init --reset
 pi-spawner config set max_concurrency 3
 pi-spawner aliases list
-pi-spawner aliases set kimi --provider openrouter --model moonshotai/kimi-k2.6 --thinking high
+pi-spawner aliases set sonnet --provider openrouter --model '~anthropic/claude-sonnet-latest' --thinking high
 pi-spawner routes set review deepseek
 ```
 
